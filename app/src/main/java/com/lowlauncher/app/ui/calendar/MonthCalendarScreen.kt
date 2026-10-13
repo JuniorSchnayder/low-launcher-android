@@ -8,15 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,17 +36,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lowlauncher.app.data.model.DayNote
+import com.lowlauncher.app.ui.theme.BorderGray
 import com.lowlauncher.app.ui.theme.DarkSurface
 import com.lowlauncher.app.ui.theme.DarkSurfaceElevated
 import com.lowlauncher.app.ui.theme.PureBlack
 import com.lowlauncher.app.ui.theme.PureWhite
 import com.lowlauncher.app.ui.theme.SoftWhite
 import com.lowlauncher.app.ui.theme.SubtleGray
-import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -60,239 +60,259 @@ fun MonthCalendarScreen(
     val state by viewModel.uiState.collectAsState()
     val localePt = Locale("pt", "BR")
 
-    val monthName = state.currentMonth.month.getDisplayName(TextStyle.FULL, localePt).replaceFirstChar { it.uppercase() }
-    val yearString = state.currentMonth.year.toString()
+    val monthName = state.currentMonth.month.getDisplayName(TextStyle.FULL, localePt).uppercase()
+    val headerTitle = "$monthName ${state.currentMonth.year}"
 
     val today = LocalDate.now()
     val firstDayOfMonth = state.currentMonth.atDay(1)
-    val daysInMonth = state.currentMonth.lengthOfMonth()
-
     // Sunday = 0, Monday = 1 ... Saturday = 6
-    val firstDayOfWeekIndex = (firstDayOfMonth.dayOfWeek.value % 7) // 0 for Sunday
-    val totalGridSlots = firstDayOfWeekIndex + daysInMonth
+    val firstDayOfWeekIndex = firstDayOfMonth.dayOfWeek.value % 7
+    val startDate = firstDayOfMonth.minusDays(firstDayOfWeekIndex.toLong())
+
+    // 6 weeks x 7 days = 42 cells total (standard full-screen monthly table)
+    val totalDays = 42
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
-            .padding(horizontal = 24.dp, vertical = 44.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .padding(top = 36.dp, bottom = 24.dp)
     ) {
-        Column {
-            // Month Header Controls
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        // 1. HEADER: Chevron Left | Pill Capsule "OUTUBRO 2026" | Chevron Right
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { viewModel.goToPreviousMonth() },
+                modifier = Modifier.size(44.dp)
             ) {
-                Column {
-                    Text(
-                        text = monthName,
-                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
-                        fontWeight = FontWeight.Light,
-                        color = PureWhite
-                    )
-                    Text(
-                        text = yearString,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SubtleGray
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // "Hoje" shortcut chip
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(DarkSurface)
-                            .clickable { viewModel.goToToday() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "Hoje",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SoftWhite
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    IconButton(
-                        onClick = { viewModel.goToPreviousMonth() },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = "Mês anterior",
-                            tint = SoftWhite
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.goToNextMonth() },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "Próximo mês",
-                            tint = SoftWhite
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = "Mês anterior",
+                    tint = PureWhite,
+                    modifier = Modifier.size(36.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Weekday Headers (Dom, Seg, Ter, Qua, Qui, Sex, Sáb)
-            val weekDays = listOf("DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // White capsule with bold black text (as in reference image)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(PureWhite)
+                    .clickable { viewModel.goToToday() }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                weekDays.forEach { dayName ->
-                    Text(
-                        text = dayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SubtleGray,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                Text(
+                    text = headerTitle,
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
+                    fontWeight = FontWeight.Black,
+                    color = PureBlack,
+                    letterSpacing = 1.sp
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 7-Column Days Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            IconButton(
+                onClick = { viewModel.goToNextMonth() },
+                modifier = Modifier.size(44.dp)
             ) {
-                items(totalGridSlots) { index ->
-                    if (index < firstDayOfWeekIndex) {
-                        // Empty slot before month start
-                        Box(modifier = Modifier.aspectRatio(1f))
-                    } else {
-                        val dayNumber = index - firstDayOfWeekIndex + 1
-                        val dayDate = state.currentMonth.atDay(dayNumber)
-                        val isSelected = dayDate == state.selectedDate
-                        val isToday = dayDate == today
-                        val dateIso = dayDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                        val hasNote = state.notesMap[dateIso]?.hasContent == true
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Próximo mês",
+                    tint = PureWhite,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 2. WEEKDAY ROW (DOM | SEG | TER | QUA | QUI | SEX | SÁB)
+        val weekDays = listOf("DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(width = 0.8.dp, color = BorderGray)
+                .background(DarkSurfaceElevated)
+                .padding(vertical = 4.dp)
+        ) {
+            weekDays.forEachIndexed { idx, dayName ->
+                Text(
+                    text = dayName,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = SoftWhite,
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (idx < 6) Modifier.border(width = 0.5.dp, color = BorderGray) else Modifier
+                        )
+                        .padding(vertical = 2.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        // 3. FULL SCREEN CALENDAR TABLE GRID (6 rows x 7 columns)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .border(width = 0.8.dp, color = BorderGray)
+        ) {
+            for (week in 0 until 6) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .then(
+                            if (week < 5) Modifier.border(width = 0.5.dp, color = BorderGray) else Modifier
+                        )
+                ) {
+                    for (col in 0 until 7) {
+                        val dayIndex = week * 7 + col
+                        val cellDate = startDate.plusDays(dayIndex.toLong())
+                        val isCurrentMonth = cellDate.month == state.currentMonth.month
+                        val isToday = cellDate == today
+                        val isSelected = cellDate == state.selectedDate
+                        val dateIso = cellDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        val note = state.notesMap[dateIso]
 
                         Box(
                             modifier = Modifier
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .then(
+                                    if (col < 6) Modifier.border(width = 0.5.dp, color = BorderGray) else Modifier
+                                )
                                 .background(
                                     when {
-                                        isSelected -> PureWhite
-                                        else -> Color.Transparent
-                                    }
-                                )
-                                .then(
-                                    if (isToday && !isSelected) {
-                                        Modifier.border(1.dp, SubtleGray, RoundedCornerShape(12.dp))
-                                    } else {
-                                        Modifier
+                                        !isCurrentMonth -> Color(0xFF141414) // Darker grey for out of month
+                                        else -> PureBlack
                                     }
                                 )
                                 .clickable {
-                                    viewModel.selectDate(dayDate)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = dayNumber.toString(),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
-                                    color = when {
-                                        isSelected -> PureBlack
-                                        isToday -> PureWhite
-                                        else -> SoftWhite
-                                    }
-                                )
-
-                                // Discrete dot indicating notes
-                                if (hasNote) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(top = 2.dp)
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) PureBlack else PureWhite)
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    viewModel.selectDate(cellDate)
+                                    onNavigateToDayDetail()
                                 }
-                            }
+                                .padding(2.dp)
+                        ) {
+                            MonthCellContent(
+                                dayNumber = cellDate.dayOfMonth,
+                                isCurrentMonth = isCurrentMonth,
+                                isToday = isToday,
+                                isSelected = isSelected,
+                                note = note
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        // Bottom Selected Day Summary Card (Tap to go to Tela 3)
-        val selectedDateFormatted = state.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", localePt))
-            .replaceFirstChar { it.uppercase() }
-        val noteContent = state.currentDayNote.content.ifBlank {
-            if (state.currentDayNote.tasks.isNotEmpty()) {
-                val done = state.currentDayNote.tasks.count { it.isDone }
-                "$done de ${state.currentDayNote.tasks.size} tarefas concluídas"
-            } else {
-                "Nenhuma anotação neste dia. Toque para adicionar."
+@Composable
+private fun MonthCellContent(
+    dayNumber: Int,
+    isCurrentMonth: Boolean,
+    isToday: Boolean,
+    isSelected: Boolean,
+    note: DayNote?
+) {
+    val numberColor = when {
+        !isCurrentMonth -> Color(0xFF555555)
+        isToday -> Color(0xFFFF4444) // Distinct red accent like the reference image
+        else -> PureWhite
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Top Row: (Optional Today Enso / Ring) + Day Number in top-right
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(1.dp)
+                    .then(
+                        if (isToday) {
+                            Modifier
+                                .border(width = 1.5.dp, color = Color(0xFFFF4444), shape = CircleShape)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        } else {
+                            Modifier.padding(horizontal = 2.dp)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = dayNumber.toString(),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
+                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = numberColor,
+                    textAlign = TextAlign.End
+                )
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(DarkSurface)
-                .clickable { onNavigateToDayDetail() }
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        // Cell Body: Note / Event Block (Matching reference style in our app theme)
+        if (note != null && note.hasContent) {
+            val previewText = when {
+                note.content.isNotBlank() -> note.content.trim().lines().firstOrNull() ?: ""
+                note.tasks.isNotEmpty() -> note.tasks.first().title
+                else -> ""
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 1.dp, vertical = 1.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color(0xFF262626)) // Subtle dark contrast card fill
+                    .border(width = 0.5.dp, color = Color(0xFF444444), shape = RoundedCornerShape(3.dp))
+                    .padding(horizontal = 2.dp, vertical = 2.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = selectedDateFormatted,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = PureWhite
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = noteContent,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SubtleGray,
-                        maxLines = 1
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DarkSurfaceElevated)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
                 ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Mail,
+                        contentDescription = "Nota",
+                        tint = PureWhite,
+                        modifier = Modifier.size(9.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(1.dp))
+
                     Text(
-                        text = "Ver Dia ➜",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PureWhite
+                        text = previewText.uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 7.5.sp,
+                            lineHeight = 9.sp,
+                            letterSpacing = (-0.2).sp
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        color = PureWhite,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
