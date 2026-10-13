@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="dark_surface">#FF0D0D0D</color>
+    <color name="pure_white">#FFFFFFFF</color>
+    <color name="soft_white">#FFE5E5E5</color>
+    <color name="subtle_gray">#FF808080</color>
+    <color name="muted_gray">#FF333333</color>
+    <color name="accent_whatsapp">#FF25D366</color>
+</resources>
