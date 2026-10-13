@@ -62,13 +62,29 @@ Low-Launcher/
 
 ---
 
-## 🚀 Como Executar / Instalar
+## 📦 Arquivo APK Gerado
 
-1. Abra a pasta `c:\WS\Low-Launcher` no **Android Studio**.
-2. Conecte seu smartphone Android via cabo USB (com a *Depuração USB* ativada) ou inicie um emulador.
-3. Clique em **Run 'app'** (`Shift + F10`) ou execute pelo terminal:
-   ```bash
-   ./gradlew installDebug
-   ```
-4. Ao pressionar o botão **Home** do smartphone, selecione o **Low Launcher** e marque **Sempre**.
-5. Conceda a permissão de *Acesso a Dados de Uso* nas Configurações do app caso deseje ver o tempo de tela diário.
+O APK já foi compilado e está pronto para instalação:
+* **[LowLauncher.apk](file:///c:/WS/Low-Launcher/LowLauncher.apk)** (copiado na raiz do projeto)
+* Local de compilação original: `app/build/outputs/apk/debug/app-debug.apk`
+
+---
+
+## 🚀 Como Instalar no Celular
+
+### Opção 1: Direto pelo Celular (Mais fácil)
+1. Envie o arquivo **`LowLauncher.apk`** para seu celular (por WhatsApp Web, Telegram, Google Drive, ou cabo USB).
+2. No celular, toque no arquivo baixado e selecione **Instalar** (se solicitado, autorize "Instalar de fontes desconhecidas").
+3. Pressione o botão **Home** do celular e selecione o **Low Launcher** como inicializador padrão.
+
+### Opção 2: Via Cabo USB (ADB)
+Com o celular conectado e *Depuração USB* ativada:
+```bash
+C:\WS\tools\android-sdk\platform-tools\adb.exe install -r LowLauncher.apk
+```
+
+---
+
+## 🛠 Como Recompilar Futuramente
+
+Basta dar dois cliques no script **`build-apk.bat`** na raiz da pasta do projeto. O script já está configurado com o ambiente Java 17 e Android SDK portátil.
