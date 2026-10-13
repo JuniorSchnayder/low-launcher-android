@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.lowlauncher.app.ui.calendar.CalendarViewModel
 import com.lowlauncher.app.ui.home.HomeScreen
 import com.lowlauncher.app.ui.home.HomeViewModel
 import com.lowlauncher.app.ui.theme.LowLauncherTheme
@@ -19,6 +20,7 @@ import com.lowlauncher.app.ui.theme.PureBlack
 class MainActivity : ComponentActivity() {
 
     private val homeViewModel: HomeViewModel by viewModels()
+    private val calendarViewModel: CalendarViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +43,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = PureBlack
                 ) {
-                    HomeScreen(viewModel = homeViewModel)
+                    HomeScreen(
+                        homeViewModel = homeViewModel,
+                        calendarViewModel = calendarViewModel
+                    )
                 }
             }
         }
