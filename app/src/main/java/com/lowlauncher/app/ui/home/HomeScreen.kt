@@ -43,7 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lowlauncher.app.data.model.AppItem
@@ -70,6 +72,7 @@ fun HomeScreen(
     homeViewModel: HomeViewModel,
     calendarViewModel: CalendarViewModel
 ) {
+    val context = LocalContext.current
     val state by homeViewModel.uiState.collectAsState()
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
@@ -92,7 +95,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(if (state.enableWallpaper) Color.Transparent else PureBlack)
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dragAmount ->
                     if (dragAmount < -30f && !state.isDrawerOpen && !state.isSettingsOpen) {
@@ -194,10 +197,15 @@ fun HomeScreen(
                 delaySeconds = state.frictionDelaySeconds,
                 showScreenTime = state.showScreenTime,
                 hasUsagePermission = state.usageInfo.hasPermission,
+                enableWallpaper = state.enableWallpaper,
+                wallpaperDimPercent = state.wallpaperDimPercent,
                 onToggleFavorite = { homeViewModel.toggleFavorite(it) },
                 onToggleFriction = { homeViewModel.toggleFriction(it) },
                 onDelayChange = { homeViewModel.setFrictionDelay(it) },
                 onToggleScreenTime = { homeViewModel.toggleShowScreenTime(it) },
+                onToggleEnableWallpaper = { homeViewModel.toggleEnableWallpaper(it) },
+                onWallpaperDimChange = { homeViewModel.setWallpaperDimPercent(it) },
+                onOpenWallpaperPicker = { homeViewModel.openWallpaperPicker(context) },
                 onBack = { homeViewModel.closeSettings() }
             )
         }
@@ -249,48 +257,49 @@ private fun MainHomeContent(
             }
         }
 
-        // Middle Section: Whitelist Favorites & Priority WhatsApp
+        // Middle Section: Whitelist Favorites & Priority WhatsApp(s)
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. DEDICATED WHATSAPP QUICK SLOT (Top Priority, Zero Friction)
-            state.whatsAppApp?.let { whatsApp ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(DarkSurface)
-                        .clickable { onAppClick(whatsApp) }
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
+            // 1. DEDICATED WHATSAPP QUICK SLOTS (All selected WhatsApps: Normal, Business, Dual)
+            if (state.whatsAppApps.isNotEmpty()) {
+                state.whatsAppApps.forEach { whatsApp ->
+                    Row(
                         modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(WhatsAppGreen)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Text(
-                        text = "WhatsApp",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = PureWhite,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = "acesso rápido",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SubtleGray
-                    )
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (state.enableWallpaper) DarkSurface.copy(alpha = 0.8f) else DarkSurface)
+                            .clickable { onAppClick(whatsApp) }
+                            .padding(horizontal = 20.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(WhatsAppGreen)
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = whatsApp.label, // shows real label: "WhatsApp" or "WhatsApp Business"
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = PureWhite,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "acesso rápido",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SubtleGray
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 2. FAVORITE APPS (Selected Whitelist in Pure Typography)
-            if (state.favoriteApps.isEmpty()) {
+            // 2. OTHER FAVORITE APPS (Selected Whitelist in Pure Typography)
+            if (state.favoriteApps.isEmpty() && state.whatsAppApps.isEmpty()) {
                 Text(
                     text = "Nenhum favorito selecionado.\nToque na engrenagem abaixo para escolher seus 4 a 6 apps essenciais.",
                     style = MaterialTheme.typography.bodyMedium,

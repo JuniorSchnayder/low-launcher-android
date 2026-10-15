@@ -71,7 +71,7 @@ fun DayDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(Color.Transparent)
             .padding(horizontal = 24.dp, vertical = 44.dp)
     ) {
         // Top Bar: Back to month button + Previous/Next day navigation

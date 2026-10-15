@@ -19,6 +19,8 @@ class LauncherPreferences(private val context: Context) {
         val KEY_FRICTION_DELAY_SECONDS = intPreferencesKey("friction_delay_seconds")
         val KEY_SHOW_SCREEN_TIME = booleanPreferencesKey("show_screen_time")
         val KEY_PURE_TEXT_MODE = booleanPreferencesKey("pure_text_mode")
+        val KEY_ENABLE_WALLPAPER = booleanPreferencesKey("enable_wallpaper")
+        val KEY_WALLPAPER_DIM_PERCENT = intPreferencesKey("wallpaper_dim_percent")
 
         // Default: WhatsApp is favorited by default if installed
         val DEFAULT_FAVORITES = setOf("com.whatsapp", "com.whatsapp.w4b")
@@ -43,6 +45,14 @@ class LauncherPreferences(private val context: Context) {
 
     val pureTextModeFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_PURE_TEXT_MODE] ?: true
+    }
+
+    val enableWallpaperFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_WALLPAPER] ?: false
+    }
+
+    val wallpaperDimPercentFlow: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[KEY_WALLPAPER_DIM_PERCENT] ?: 60
     }
 
     suspend fun toggleFavorite(packageName: String) {
@@ -84,6 +94,18 @@ class LauncherPreferences(private val context: Context) {
     suspend fun setPureTextMode(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_PURE_TEXT_MODE] = enabled
+        }
+    }
+
+    suspend fun setEnableWallpaper(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_WALLPAPER] = enabled
+        }
+    }
+
+    suspend fun setWallpaperDimPercent(percent: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_WALLPAPER_DIM_PERCENT] = percent.coerceIn(10, 95)
         }
     }
 }

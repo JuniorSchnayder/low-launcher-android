@@ -8,5 +8,7 @@ data class AppItem(
     val hasFrictionDelay: Boolean = false
 ) {
     val isWhatsApp: Boolean
-        get() = packageName == "com.whatsapp" || packageName == "com.whatsapp.w4b"
+        get() = packageName == "com.whatsapp" ||
+                packageName == "com.whatsapp.w4b" ||
+                packageName.contains("whatsapp", ignoreCase = true)
 }

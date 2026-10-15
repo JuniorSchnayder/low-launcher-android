@@ -46,6 +46,8 @@ import com.lowlauncher.app.ui.theme.SoftWhite
 import com.lowlauncher.app.ui.theme.SubtleGray
 import com.lowlauncher.app.ui.theme.WhatsAppGreen
 
+import com.lowlauncher.app.util.normalizeForSearch
+
 @Composable
 fun AppDrawerSheet(
     allApps: List<AppItem>,
@@ -59,8 +61,9 @@ fun AppDrawerSheet(
         if (searchQuery.isBlank()) {
             allApps
         } else {
+            val queryNormalized = searchQuery.normalizeForSearch()
             allApps.filter {
-                it.label.contains(searchQuery.trim(), ignoreCase = true)
+                it.label.normalizeForSearch().contains(queryNormalized)
             }
         }
     }
@@ -72,7 +75,7 @@ fun AppDrawerSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(PureBlack.copy(alpha = 0.95f))
             .padding(horizontal = 24.dp)
     ) {
         Column(

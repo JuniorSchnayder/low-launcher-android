@@ -38,10 +38,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val bgAlpha = if (state.enableWallpaper) (state.wallpaperDimPercent / 100f) else 1f
+            val backgroundColor = PureBlack.copy(alpha = bgAlpha)
+
             LowLauncherTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = PureBlack
+                    color = backgroundColor
                 ) {
                     HomeScreen(
                         homeViewModel = homeViewModel,

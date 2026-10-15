@@ -75,7 +75,7 @@ fun MonthCalendarScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(Color.Transparent)
             .padding(top = 36.dp, bottom = 24.dp)
     ) {
         // 1. HEADER: Chevron Left | Pill Capsule "OUTUBRO 2026" | Chevron Right
@@ -193,8 +193,8 @@ fun MonthCalendarScreen(
                                 )
                                 .background(
                                     when {
-                                        !isCurrentMonth -> Color(0xFF141414) // Darker grey for out of month
-                                        else -> PureBlack
+                                        !isCurrentMonth -> Color(0x66141414)
+                                        else -> Color.Transparent
                                     }
                                 )
                                 .clickable {

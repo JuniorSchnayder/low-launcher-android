@@ -18,13 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,14 +41,18 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,7 +63,7 @@ import com.lowlauncher.app.ui.theme.PureBlack
 import com.lowlauncher.app.ui.theme.PureWhite
 import com.lowlauncher.app.ui.theme.SoftWhite
 import com.lowlauncher.app.ui.theme.SubtleGray
-import com.lowlauncher.app.ui.theme.WhatsAppGreen
+import com.lowlauncher.app.util.normalizeForSearch
 
 @Composable
 fun SettingsScreen(
@@ -63,10 +71,15 @@ fun SettingsScreen(
     delaySeconds: Int,
     showScreenTime: Boolean,
     hasUsagePermission: Boolean,
+    enableWallpaper: Boolean,
+    wallpaperDimPercent: Int,
     onToggleFavorite: (String) -> Unit,
     onToggleFriction: (String) -> Unit,
     onDelayChange: (Int) -> Unit,
     onToggleScreenTime: (Boolean) -> Unit,
+    onToggleEnableWallpaper: (Boolean) -> Unit,
+    onWallpaperDimChange: (Int) -> Unit,
+    onOpenWallpaperPicker: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -76,7 +89,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(PureBlack.copy(alpha = 0.96f))
             .padding(top = 40.dp)
     ) {
         // Top Bar
@@ -104,7 +117,7 @@ fun SettingsScreen(
         // Tabs
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = PureBlack,
+            containerColor = Color.Transparent,
             contentColor = PureWhite,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
@@ -135,7 +148,12 @@ fun SettingsScreen(
                 context = context,
                 showScreenTime = showScreenTime,
                 hasUsagePermission = hasUsagePermission,
-                onToggleScreenTime = onToggleScreenTime
+                enableWallpaper = enableWallpaper,
+                wallpaperDimPercent = wallpaperDimPercent,
+                onToggleScreenTime = onToggleScreenTime,
+                onToggleEnableWallpaper = onToggleEnableWallpaper,
+                onWallpaperDimChange = onWallpaperDimChange,
+                onOpenWallpaperPicker = onOpenWallpaperPicker
             )
         }
     }
@@ -146,7 +164,17 @@ private fun FavoritesConfigTab(
     allApps: List<AppItem>,
     onToggleFavorite: (String) -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
     val favoritesCount = allApps.count { it.isFavorite }
+
+    val filteredApps = remember(searchQuery, allApps) {
+        if (searchQuery.isBlank()) {
+            allApps
+        } else {
+            val q = searchQuery.normalizeForSearch()
+            allApps.filter { it.label.normalizeForSearch().contains(q) }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -154,7 +182,7 @@ private fun FavoritesConfigTab(
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Text(
-            text = "Selecione os 4 a 6 apps que terão acesso direto na tela inicial. Menos apps = menor distração.",
+            text = "Selecione os aplicativos que aparecerão na tela inicial.",
             style = MaterialTheme.typography.bodyMedium,
             color = SubtleGray
         )
@@ -162,11 +190,43 @@ private fun FavoritesConfigTab(
             text = "Selecionados: $favoritesCount",
             style = MaterialTheme.typography.labelSmall,
             color = PureWhite,
-            modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+        )
+
+        // Instant accent-insensitive search bar
+        TextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = {
+                Text("Filtrar apps (ex: camera, whatsapp)...", color = SubtleGray)
+            },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null, tint = SubtleGray)
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Limpar", tint = SubtleGray)
+                    }
+                }
+            },
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = DarkSurface,
+                unfocusedContainerColor = DarkSurface,
+                focusedTextColor = PureWhite,
+                unfocusedTextColor = SoftWhite,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
         )
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(allApps, key = { it.packageName }) { app ->
+            items(filteredApps, key = { it.packageName }) { app ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -203,6 +263,18 @@ private fun FrictionConfigTab(
     onToggleFriction: (String) -> Unit,
     onDelayChange: (Int) -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredApps = remember(searchQuery, allApps) {
+        val nonWhatsApp = allApps.filter { !it.isWhatsApp }
+        if (searchQuery.isBlank()) {
+            nonWhatsApp
+        } else {
+            val q = searchQuery.normalizeForSearch()
+            nonWhatsApp.filter { it.label.normalizeForSearch().contains(q) }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -242,17 +314,48 @@ private fun FrictionConfigTab(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Marque os apps que devem ter pausa reflexiva (ex: redes sociais):",
+            text = "Marque os apps que devem ter pausa reflexiva:",
             style = MaterialTheme.typography.bodyMedium,
             color = SubtleGray,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        TextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = {
+                Text("Filtrar apps...", color = SubtleGray)
+            },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null, tint = SubtleGray)
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Limpar", tint = SubtleGray)
+                    }
+                }
+            },
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = DarkSurface,
+                unfocusedContainerColor = DarkSurface,
+                focusedTextColor = PureWhite,
+                unfocusedTextColor = SoftWhite,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
         )
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(allApps.filter { !it.isWhatsApp }, key = { it.packageName }) { app ->
+            items(filteredApps, key = { it.packageName }) { app ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -287,17 +390,30 @@ private fun GeneralSettingsTab(
     context: Context,
     showScreenTime: Boolean,
     hasUsagePermission: Boolean,
-    onToggleScreenTime: (Boolean) -> Unit
+    enableWallpaper: Boolean,
+    wallpaperDimPercent: Int,
+    onToggleScreenTime: (Boolean) -> Unit,
+    onToggleEnableWallpaper: (Boolean) -> Unit,
+    onWallpaperDimChange: (Int) -> Unit,
+    onOpenWallpaperPicker: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
+        // Section: Tempo de Tela
+        Text(
+            text = "BEM-ESTAR DIGITAL",
+            style = MaterialTheme.typography.labelSmall,
+            color = SubtleGray
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -308,7 +424,7 @@ private fun GeneralSettingsTab(
                     color = PureWhite
                 )
                 Text(
-                    text = "Mostra horas/minutos usados hoje abaixo do relógio",
+                    text = "Mostra horas e minutos usados hoje",
                     style = MaterialTheme.typography.bodyMedium,
                     color = SubtleGray
                 )
@@ -326,7 +442,7 @@ private fun GeneralSettingsTab(
         }
 
         if (!hasUsagePermission) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -338,22 +454,115 @@ private fun GeneralSettingsTab(
                         }
                         context.startActivity(intent)
                     }
-                    .padding(16.dp)
+                    .padding(14.dp)
             ) {
                 Column {
                     Text(
-                        text = "⚠️ Permissão de Acesso a Uso Necessária",
+                        text = "⚠️ Permissão de Uso Necessária",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = PureWhite
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Toque aqui para autorizar o Android a fornecer as estatísticas de tempo de tela de forma 100% privada e local.",
+                        text = "Toque aqui para autorizar o acesso aos dados de tempo de tela no Android.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = SubtleGray
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        HorizontalDivider(color = DarkSurfaceElevated)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Section: Papel de Parede (Wallpaper)
+        Text(
+            text = "PAPEL DE PAREDE",
+            style = MaterialTheme.typography.labelSmall,
+            color = SubtleGray
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Exibir papel de parede do celular",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PureWhite
+                )
+                Text(
+                    text = if (enableWallpaper) "Papel de parede visível com filtro escuro" else "Fundo preto puro (OLED)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SubtleGray
+                )
+            }
+            Switch(
+                checked = enableWallpaper,
+                onCheckedChange = onToggleEnableWallpaper,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = PureBlack,
+                    checkedTrackColor = PureWhite,
+                    uncheckedThumbColor = SubtleGray,
+                    uncheckedTrackColor = DarkSurface
+                )
+            )
+        }
+
+        if (enableWallpaper) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Escurecimento do Fundo: $wallpaperDimPercent%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SubtleGray
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Slider(
+                    value = wallpaperDimPercent.toFloat(),
+                    onValueChange = { onWallpaperDimChange(it.toInt()) },
+                    valueRange = 10f..95f,
+                    steps = 16,
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = PureWhite,
+                        activeTrackColor = PureWhite,
+                        inactiveTrackColor = DarkSurfaceElevated
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = onOpenWallpaperPicker,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkSurfaceElevated,
+                    contentColor = PureWhite
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Escolher Papel de Parede do Android")
             }
         }
     }
